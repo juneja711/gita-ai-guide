@@ -36,16 +36,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Check Server Config
 async function checkServerConfig() {
+  // Always active by default so visitors are never blocked
+  state.hasServerKey = true;
+  state.model = 'gemini-3.6-flash';
+  updateKeyStatusIndicator();
+
   try {
     const res = await fetch('/api/config');
-    const data = await res.json();
-    state.hasServerKey = data.hasServerKey;
-    if (!state.model && data.defaultModel) {
-      state.model = data.defaultModel;
+    if (res.ok && res.headers.get('content-type')?.includes('json')) {
+      const data = await res.json();
+      if (typeof data.hasServerKey === 'boolean') {
+        state.hasServerKey = data.hasServerKey;
+      }
+      if (data.defaultModel) {
+        state.model = data.defaultModel;
+      }
+      updateKeyStatusIndicator();
     }
-    updateKeyStatusIndicator();
   } catch (e) {
-    console.warn('Could not check server config:', e);
+    // Keep server key active by default
   }
 }
 
@@ -152,13 +161,6 @@ function setupAutoResize() {
 async function handleSubmit() {
   const text = userInput.value.trim();
   if (!text || state.isStreaming) return;
-
-  // Only prompt for key if server explicitly confirms no key is configured
-  if (!state.apiKey && state.hasServerKey === false) {
-    openSettings();
-    showToast('Please enter your free Google Gemini API key to begin.', 'warning');
-    return;
-  }
 
   // Hide welcome hero on first message
   welcomeHero.classList.add('hidden');
