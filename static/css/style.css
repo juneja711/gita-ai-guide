@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Tiro+Devanagari+Sanskrit:ital@0;1&display=swap');
+
+:root {
+  --primary-saffron: #f59e0b;
+  --primary-gold: #d97706;
+  --accent-sacred: #ea580c;
+  --bg-deep: #0b0f17;
+  --bg-surface: #111827;
+  --bg-card: rgba(17, 24, 39, 0.85);
+  --border-subtle: rgba(245, 158, 11, 0.18);
+  --border-glow: rgba(245, 158, 11, 0.4);
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(245, 158, 11, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(234, 88, 12, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(217, 119, 6, 0.03) 0%, transparent 60%);
+  background-attachment: fixed;
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+.font-sanskrit {
+  font-family: 'Tiro Devanagari Sanskrit', serif;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.6);
+}
+
+/* Subtle glow animations */
+@keyframes lotusPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.35));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.65));
+  }
+}
+
+.lotus-pulse {
+  animation: lotusPulse 6s ease-in-out infinite;
+}
+
+/* Glassmorphism Card */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* Structured Gita Section Cards */
+.gita-section-card {
+  transition: all 0.25s ease;
+  border-left-width: 4px;
+}
+
+.gita-section-card:hover {
+  border-color: var(--primary-saffron);
+  transform: translateY(-1px);
+}
+
+/* Streaming blinking cursor */
+.typing-cursor::after {
+  content: '▋';
+  display: inline-block;
+  vertical-align: baseline;
+  color: var(--primary-saffron);
+  animation: blink 0.8s infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Gradient accents */
+.saffron-gradient {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+}
+
+.saffron-gradient-text {
+  background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Prose refinements */
+.wisdom-content p {
+  margin-bottom: 0.75rem;
+  line-height: 1.65;
+}
+.wisdom-content p:last-child {
+  margin-bottom: 0;
+}
