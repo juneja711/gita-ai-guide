@@ -123,11 +123,19 @@ def get_openai_client(api_key: str) -> OpenAI:
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_home():
-    html_path = get_resource_path(os.path.join("templates", "index.html"))
+    html_path = get_resource_path(os.path.join("templates", "index.html")) or get_resource_path(os.path.join("public", "index.html"))
     if not html_path or not os.path.exists(html_path):
         return HTMLResponse("<h1>Gita AI Guide is starting up...</h1>")
     with open(html_path, "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
+
+@app.api_route("/api/index.py", methods=["GET", "POST", "OPTIONS"])
+async def handle_vercel_direct(request: Request):
+    if request.method == "POST":
+        body = await request.json()
+        req_obj = ChatRequest(**body)
+        return await chat_endpoint(req_obj)
+    return await serve_home()
 
 @app.get("/api/config")
 async def get_config():
