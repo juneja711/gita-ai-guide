@@ -132,9 +132,15 @@ async def serve_home():
 @app.api_route("/api/index.py", methods=["GET", "POST", "OPTIONS"])
 async def handle_vercel_direct(request: Request):
     if request.method == "POST":
-        body = await request.json()
-        req_obj = ChatRequest(**body)
-        return await chat_endpoint(req_obj)
+        try:
+            body = await request.json()
+            req_obj = ChatRequest(**body)
+            auth = request.headers.get("Authorization")
+            return await chat_endpoint(req_obj, authorization=auth)
+        except HTTPException as he:
+            return JSONResponse(status_code=he.status_code, content={"detail": he.detail})
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"detail": str(e)})
     return await serve_home()
 
 @app.get("/api/config")
