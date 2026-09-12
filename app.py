@@ -36,10 +36,23 @@ async def add_no_cache_header(request: Request, call_next):
         response.headers["Expires"] = "0"
     return response
 
+# Discover paths resiliently across local, Docker, and Vercel serverless
+def get_resource_path(sub_path: str) -> Optional[str]:
+    base_dirs = [
+        os.path.dirname(os.path.abspath(__file__)),
+        os.getcwd(),
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ]
+    for b in base_dirs:
+        candidate = os.path.join(b, sub_path)
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
 # Mount static files
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+resolved_static = get_resource_path("static")
+if resolved_static:
+    app.mount("/static", StaticFiles(directory=resolved_static), name="static")
 
 SYSTEM_PROMPT = """You are an AI assistant named Mayank.
 You are an AI guide whose responses are deeply inspired by the wisdom of the Bhagavad Gita and the teachings of Lord Krishna.
@@ -110,8 +123,8 @@ def get_openai_client(api_key: str) -> OpenAI:
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_home():
-    html_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
-    if not os.path.exists(html_path):
+    html_path = get_resource_path(os.path.join("templates", "index.html"))
+    if not html_path or not os.path.exists(html_path):
         return HTMLResponse("<h1>Gita AI Guide is starting up...</h1>")
     with open(html_path, "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
