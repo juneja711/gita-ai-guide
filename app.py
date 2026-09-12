@@ -131,6 +131,17 @@ async def serve_home():
 
 @app.api_route("/api/index.py", methods=["GET", "POST", "OPTIONS"])
 async def handle_vercel_direct(request: Request):
+    path = (
+        request.headers.get("x-matched-path")
+        or request.headers.get("x-invoke-path")
+        or request.headers.get("x-vercel-matched-path")
+        or request.url.path
+        or ""
+    )
+    if "config" in path:
+        return await get_config()
+    if "health" in path:
+        return await health_check()
     if request.method == "POST":
         try:
             body = await request.json()

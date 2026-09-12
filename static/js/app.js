@@ -8,7 +8,7 @@ const state = {
   isStreaming: false,
   apiKey: localStorage.getItem('gita_gemini_api_key') || '',
   model: 'gemini-3.6-flash',
-  hasServerKey: false,
+  hasServerKey: true, // Default to true so users and friends are never blocked
   speakingUtterance: null
 };
 
@@ -153,8 +153,8 @@ async function handleSubmit() {
   const text = userInput.value.trim();
   if (!text || state.isStreaming) return;
 
-  // Check if API key is configured anywhere
-  if (!state.apiKey && !state.hasServerKey) {
+  // Only prompt for key if server explicitly confirms no key is configured
+  if (!state.apiKey && state.hasServerKey === false) {
     openSettings();
     showToast('Please enter your free Google Gemini API key to begin.', 'warning');
     return;
