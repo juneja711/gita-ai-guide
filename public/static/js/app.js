@@ -1,6 +1,5 @@
-// Gita AI Guide - Client Application Logic
+// Gita AI Guide - Client Application Logic with Bhagavad Gita RAG
 
-// Always ensure the active model is gemini-3.6-flash
 localStorage.setItem('gita_model', 'gemini-3.6-flash');
 
 const state = {
@@ -8,8 +7,9 @@ const state = {
   isStreaming: false,
   apiKey: localStorage.getItem('gita_gemini_api_key') || '',
   model: 'gemini-3.6-flash',
-  hasServerKey: true, // Default to true so users and friends are never blocked
-  speakingUtterance: null
+  hasServerKey: true,
+  speakingUtterance: null,
+  searchDebounceTimer: null
 };
 
 // Elements
@@ -27,16 +27,23 @@ const apiKeyInput = document.getElementById('apiKeyInput');
 const modelSelect = document.getElementById('modelSelect');
 const keyStatusBadge = document.getElementById('keyStatusBadge');
 
+// Search Modal Elements
+const searchVerseBtn = document.getElementById('searchVerseBtn');
+const searchModal = document.getElementById('searchModal');
+const closeSearchBtn = document.getElementById('closeSearchBtn');
+const verseSearchInput = document.getElementById('verseSearchInput');
+const verseSearchResults = document.getElementById('verseSearchResults');
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   setupAutoResize();
+  setupSearchModal();
   await checkServerConfig();
 });
 
 // Check Server Config
 async function checkServerConfig() {
-  // Always active by default so visitors are never blocked
   state.hasServerKey = true;
   state.model = 'gemini-3.6-flash';
   updateKeyStatusIndicator();
@@ -54,14 +61,14 @@ async function checkServerConfig() {
       updateKeyStatusIndicator();
     }
   } catch (e) {
-    // Keep server key active by default
+    // Keep defaults
   }
 }
 
 function updateKeyStatusIndicator() {
   if (state.apiKey) {
     keyStatusBadge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
-      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Custom API Key Active
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Custom Key Active
     </span>`;
   } else if (state.hasServerKey) {
     keyStatusBadge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-950/80 text-amber-300 border border-amber-800/60">
@@ -98,7 +105,6 @@ function setupEventListeners() {
   closeSettingsBtn.addEventListener('click', closeSettings);
   saveSettingsBtn.addEventListener('click', saveSettings);
 
-  // Close modal on background click
   settingsModal.addEventListener('click', (e) => {
     if (e.target === settingsModal) closeSettings();
   });
@@ -114,6 +120,138 @@ function setupEventListeners() {
     });
   });
 }
+
+// Scripture Explorer Modal Logic
+function setupSearchModal() {
+  if (searchVerseBtn) searchVerseBtn.addEventListener('click', openSearchModal);
+  if (closeSearchBtn) closeSearchBtn.addEventListener('click', closeSearchModal);
+
+  if (searchModal) {
+    searchModal.addEventListener('click', (e) => {
+      if (e.target === searchModal) closeSearchModal();
+    });
+  }
+
+  if (verseSearchInput) {
+    verseSearchInput.addEventListener('input', () => {
+      clearTimeout(state.searchDebounceTimer);
+      const q = verseSearchInput.value.trim();
+      if (!q) {
+        verseSearchResults.innerHTML = `
+          <div class="text-center py-8 text-gray-400 text-xs">
+            Type a concept, dilemma, or chapter/verse reference above to retrieve verses.
+          </div>`;
+        return;
+      }
+      state.searchDebounceTimer = setTimeout(() => executeVerseSearch(q), 300);
+    });
+
+    verseSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        clearTimeout(state.searchDebounceTimer);
+        const q = verseSearchInput.value.trim();
+        if (q) executeVerseSearch(q);
+      }
+    });
+  }
+
+  document.querySelectorAll('.search-quick-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const query = chip.getAttribute('data-q');
+      if (query && verseSearchInput) {
+        verseSearchInput.value = query;
+        executeVerseSearch(query);
+      }
+    });
+  });
+}
+
+function openSearchModal() {
+  searchModal.classList.remove('hidden');
+  setTimeout(() => verseSearchInput?.focus(), 50);
+}
+
+function closeSearchModal() {
+  searchModal.classList.add('hidden');
+}
+
+async function executeVerseSearch(query) {
+  if (!verseSearchResults) return;
+  verseSearchResults.innerHTML = `
+    <div class="text-center py-6 text-amber-400/80 text-xs flex items-center justify-center gap-2">
+      <span class="animate-spin text-sm">🕉</span> Searching sacred verses via RAG...
+    </div>`;
+
+  try {
+    const res = await fetch(`/api/verses/search?q=${encodeURIComponent(query)}&limit=6`, {
+      headers: state.apiKey ? { 'Authorization': `Bearer ${state.apiKey}` } : {}
+    });
+    if (!res.ok) throw new Error('Search failed');
+    const data = await res.json();
+    const verses = data.verses || [];
+
+    if (verses.length === 0) {
+      verseSearchResults.innerHTML = `
+        <div class="text-center py-8 text-gray-400 text-xs">
+          No verses found matching "${escapeHtml(query)}". Try another topic or reference (e.g. 2.47).
+        </div>`;
+      return;
+    }
+
+    let html = '';
+    verses.forEach((v) => {
+      const scoreBadge = v.match_type === 'exact_reference'
+        ? `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Exact Reference</span>`
+        : `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/25">${Math.round(v.score * 100)}% Match</span>`;
+
+      html += `
+        <div class="p-3.5 rounded-xl glass-panel border border-amber-500/20 hover:border-amber-500/50 transition space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="font-cinzel text-xs font-bold text-amber-300">${escapeHtml(v.reference)}</span>
+              <span class="text-[11px] text-gray-400">· ${escapeHtml(v.chapter_name || '')}</span>
+            </div>
+            ${scoreBadge}
+          </div>
+
+          <div class="font-sanskrit text-sm text-amber-100 whitespace-pre-line leading-relaxed bg-black/20 p-2.5 rounded-lg border border-amber-500/10">
+            ${escapeHtml(v.slok)}
+          </div>
+
+          <div class="text-xs text-amber-300/80 italic font-mono text-[11px]">
+            ${escapeHtml(v.transliteration)}
+          </div>
+
+          <p class="text-xs text-gray-200 leading-relaxed">
+            <strong class="text-amber-300 font-medium">Translation:</strong> ${escapeHtml(v.translation_en)}
+          </p>
+
+          <div class="flex items-center justify-between pt-2 border-t border-gray-800/80">
+            <button onclick="askAboutVerse('${escapeHtml(v.reference)}')" class="text-xs text-amber-400 hover:text-amber-300 hover:underline inline-flex items-center gap-1 font-medium">
+              <span>✦</span> Ask Mayank for guidance on this verse
+            </button>
+            <button onclick="toggleSpeech('${escapeHtml(v.translation_en)}', this)" class="p-1 rounded text-gray-400 hover:text-amber-300 text-xs transition" title="Listen">
+              🔊
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    verseSearchResults.innerHTML = html;
+  } catch (err) {
+    verseSearchResults.innerHTML = `
+      <div class="text-center py-6 text-rose-400 text-xs">
+        Failed to search verses: ${escapeHtml(err.message)}
+      </div>`;
+  }
+}
+
+window.askAboutVerse = function(ref) {
+  closeSearchModal();
+  userInput.value = `Explain the practical guidance and wisdom of ${ref} for my modern life.`;
+  handleSubmit();
+};
 
 function openSettings() {
   apiKeyInput.value = state.apiKey;
@@ -162,18 +300,14 @@ async function handleSubmit() {
   const text = userInput.value.trim();
   if (!text || state.isStreaming) return;
 
-  // Hide welcome hero on first message
   welcomeHero.classList.add('hidden');
 
-  // Append user message
   appendUserMessage(text);
   userInput.value = '';
   userInput.style.height = 'auto';
 
-  // Prepare payload
   const historyPayload = state.messages.map(m => ({ role: m.role, content: m.content }));
 
-  // Create assistant placeholder message
   const assistantMsgEl = createAssistantMessageElement();
   chatContainer.appendChild(assistantMsgEl);
   scrollToBottom();
@@ -181,6 +315,7 @@ async function handleSubmit() {
   const contentArea = assistantMsgEl.querySelector('.response-content');
   contentArea.classList.add('typing-cursor');
   let rawAccumulated = '';
+  let retrievedVerses = [];
 
   state.isStreaming = true;
   setControlsDisabled(true);
@@ -231,7 +366,11 @@ async function handleSubmit() {
             continue;
           }
 
-          if (data.type === 'chunk') {
+          if (data.type === 'rag') {
+            retrievedVerses = data.verses || [];
+            renderRagVerses(assistantMsgEl, retrievedVerses);
+            scrollToBottom();
+          } else if (data.type === 'chunk') {
             rawAccumulated += data.content;
             contentArea.innerHTML = formatIntermediateStreaming(rawAccumulated);
             scrollToBottom();
@@ -249,10 +388,8 @@ async function handleSubmit() {
     }
 
     contentArea.classList.remove('typing-cursor');
-    // Once complete, format with rich Gita cards
-    renderStructuredWisdom(assistantMsgEl, rawAccumulated);
+    renderStructuredWisdom(assistantMsgEl, rawAccumulated, retrievedVerses);
 
-    // Save to conversation history
     state.messages.push({ role: 'user', content: text });
     state.messages.push({ role: 'assistant', content: rawAccumulated });
 
@@ -306,7 +443,9 @@ function createAssistantMessageElement() {
       <div class="flex items-center justify-between pb-3 mb-3 border-b border-gray-800/80">
         <div class="flex items-center gap-2">
           <span class="font-cinzel font-semibold text-amber-400 text-sm tracking-wide">Mayank · Gita Guide</span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300/80 border border-amber-500/20">Bhagavad Gita</span>
+          <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300/90 border border-amber-500/20">
+            Bhagavad Gita · RAG
+          </span>
         </div>
         <div class="flex items-center gap-1 action-buttons opacity-0 transition-opacity">
           <button class="listen-btn p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-amber-300 text-xs transition" title="Listen to counsel">
@@ -321,12 +460,78 @@ function createAssistantMessageElement() {
           </button>
         </div>
       </div>
+
+      <!-- RAG Grounding Verses Container -->
+      <div class="rag-grounding-container mb-4 hidden"></div>
+
+      <!-- Main Wisdom Content Area -->
       <div class="response-content wisdom-content space-y-4 text-sm md:text-base leading-relaxed">
-        <span class="text-amber-400/60 italic text-sm">Contemplating the verses of the Gita...</span>
+        <span class="text-amber-400/60 italic text-sm">Consulting the verses of the Gita...</span>
       </div>
     </div>
   `;
   return msgEl;
+}
+
+// Render Retrieved RAG Verses Accordion
+function renderRagVerses(messageContainer, verses) {
+  if (!verses || verses.length === 0) return;
+  const ragContainer = messageContainer.querySelector('.rag-grounding-container');
+  if (!ragContainer) return;
+
+  ragContainer.classList.remove('hidden');
+
+  let cardsHtml = '';
+  verses.forEach((v, idx) => {
+    const scoreBadge = v.match_type === 'exact_reference'
+      ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Exact Reference</span>`
+      : `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/25">${Math.round(v.score * 100)}% Match</span>`;
+
+    cardsHtml += `
+      <div class="p-3 rounded-xl bg-black/30 border border-amber-500/20 text-xs space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <span class="font-cinzel font-bold text-amber-400 text-xs">${escapeHtml(v.reference)}</span>
+            <span class="text-gray-400 text-[11px]">(${escapeHtml(v.chapter_name || '')})</span>
+          </div>
+          ${scoreBadge}
+        </div>
+
+        <div class="font-sanskrit text-amber-100 text-sm leading-relaxed p-2 rounded-lg bg-amber-950/20 border border-amber-500/10">
+          ${escapeHtml(v.slok)}
+        </div>
+
+        <div class="text-amber-400/80 italic font-mono text-[11px]">
+          ${escapeHtml(v.transliteration)}
+        </div>
+
+        <p class="text-gray-200 leading-relaxed text-xs">
+          <strong class="text-amber-300">Translation:</strong> ${escapeHtml(v.translation_en)}
+        </p>
+
+        ${v.translation_hi ? `
+          <div class="text-gray-300/90 text-xs pt-1 border-t border-gray-800">
+            <strong class="text-orange-300">हिंदी भावार्थ:</strong> ${escapeHtml(v.translation_hi)}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  ragContainer.innerHTML = `
+    <details class="group rounded-xl bg-amber-950/25 border border-amber-500/30 overflow-hidden" open>
+      <summary class="cursor-pointer px-3.5 py-2.5 flex items-center justify-between text-xs font-semibold text-amber-300 hover:bg-amber-900/20 transition select-none">
+        <div class="flex items-center gap-2">
+          <span>📜</span>
+          <span>Grounded in Authentic Gita Verses (${verses.length} Retrieved)</span>
+        </div>
+        <span class="text-amber-400 text-[11px] group-open:rotate-180 transition-transform">▼</span>
+      </summary>
+      <div class="p-3 pt-1 space-y-2.5">
+        ${cardsHtml}
+      </div>
+    </details>
+  `;
 }
 
 // Intermediate streaming format (while typing)
@@ -338,12 +543,11 @@ function formatIntermediateStreaming(text) {
 }
 
 // Parse Structured Wisdom Sections
-function renderStructuredWisdom(messageContainer, rawText) {
+function renderStructuredWisdom(messageContainer, rawText, retrievedVerses = []) {
   const contentArea = messageContainer.querySelector('.response-content');
   const actionButtons = messageContainer.querySelector('.action-buttons');
   if (actionButtons) actionButtons.classList.remove('opacity-0');
 
-  // Bind Listen & Copy buttons
   const listenBtn = messageContainer.querySelector('.listen-btn');
   const copyBtn = messageContainer.querySelector('.copy-btn');
 
@@ -415,7 +619,7 @@ function renderStructuredWisdom(messageContainer, rawText) {
         .filter(s => s.length > 0);
 
       let actionItemsHtml = '';
-      actionsList.forEach((item, idx) => {
+      actionsList.forEach((item) => {
         const cleanItem = item.replace(/^[-*•\d.]+\s*/, '');
         if (cleanItem) {
           actionItemsHtml += `
@@ -450,7 +654,6 @@ function renderStructuredWisdom(messageContainer, rawText) {
 
     contentArea.innerHTML = html;
   } else {
-    // Fallback if formatting was non-standard
     contentArea.innerHTML = formatMarkdownText(rawText);
   }
 }
@@ -485,11 +688,8 @@ function parseGitaSections(text) {
 function formatMarkdownText(str) {
   if (!str) return '';
   let formatted = escapeHtml(str);
-  // Bold
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-300 font-semibold">$1</strong>');
-  // Italics
   formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  // Line breaks to paragraphs
   return formatted.replace(/\n\n+/g, '</p><p class="mt-2">').replace(/\n/g, '<br/>');
 }
 
@@ -506,7 +706,6 @@ function toggleSpeech(text, btn) {
     return;
   }
 
-  // Clean text for speech
   const speechText = text
     .replace(/━+/g, '')
     .replace(/[🌼🕉📖🌍💡🌿*#]/g, '')

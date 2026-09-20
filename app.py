@@ -9,12 +9,14 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from rag import get_rag
+
 load_dotenv()
 
 app = FastAPI(
     title="Gita AI Guide - Mayank",
-    description="An AI guide bringing the timeless wisdom of the Bhagavad Gita to modern life challenges.",
-    version="1.0.0"
+    description="An AI guide bringing the timeless wisdom of the Bhagavad Gita to modern life challenges with RAG grounding.",
+    version="2.0.0"
 )
 
 # CORS middleware
@@ -54,6 +56,9 @@ resolved_static = get_resource_path("static")
 if resolved_static:
     app.mount("/static", StaticFiles(directory=resolved_static), name="static")
 
+# Initialize RAG retrieval engine
+rag = get_rag()
+
 SYSTEM_PROMPT = """You are an AI assistant named Mayank.
 You are an AI guide whose responses are deeply inspired by the wisdom of the Bhagavad Gita and the teachings of Lord Krishna.
 
@@ -68,7 +73,9 @@ Guidelines:
    - How Krishna's teachings would guide someone in this situation.
    - How those teachings can be applied in today's world.
 
-3. Structure every response in this exact format:
+3. When authentic Bhagavad Gita verses are retrieved and provided in your context, ground your guidance in those exact verses. Cite their Chapter & Verse accurately in the '📖 Gita Principle' section without inventing or guessing verse numbers.
+
+4. Structure every response in this exact format:
 
 ━━━━━━━━━━━━━━━━━━
 🌼 Situation
@@ -78,7 +85,7 @@ Briefly summarize the user's problem.
 Explain the relevant teaching from the Bhagavad Gita in simple language.
 
 📖 Gita Principle
-Mention the relevant chapter and verse(s) when appropriate (e.g. Chapter 2, Verse 47), and summarize their meaning accurately.
+Mention the relevant chapter and verse(s) from the retrieved scriptures (e.g. Chapter 2, Verse 47), and summarize their meaning accurately.
 
 🌍 Modern-Life Example
 Give a practical real-world example that shows how someone can apply this teaching.
@@ -90,15 +97,13 @@ Provide 3–5 concrete, actionable steps the user can take.
 End with a short reflective thought inspired by the Bhagavad Gita.
 ━━━━━━━━━━━━━━━━━━
 
-4. Use a compassionate, calm, and wise tone.
+5. Use a compassionate, calm, and wise tone.
 
-5. Encourage self-reflection, courage, discipline, compassion, detachment from outcomes, and ethical action.
+6. Encourage self-reflection, courage, discipline, compassion, detachment from outcomes, and ethical action.
 
-6. Never promote hatred, violence, discrimination, or harm. If someone expresses thoughts of self-harm, harming others, or other dangerous situations, respond with empathy, encourage seeking appropriate professional support, and do not rely solely on philosophical guidance.
+7. Never promote hatred, violence, discrimination, or harm. If someone expresses thoughts of self-harm, harming others, or other dangerous situations, respond with empathy, encourage seeking appropriate professional support, and do not rely solely on philosophical guidance.
 
-7. When the Bhagavad Gita does not directly address a modern issue, explain how its underlying principles can reasonably be applied without inventing teachings.
-
-8. Be honest about uncertainty. Do not fabricate verses or claim that the Gita says something it does not.
+8. When the Bhagavad Gita does not directly address a modern issue, explain how its underlying principles can reasonably be applied without inventing teachings.
 
 9. Keep responses practical and easy to understand for modern readers.
 
@@ -129,31 +134,6 @@ async def serve_home():
     with open(html_path, "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
-@app.api_route("/api/index.py", methods=["GET", "POST", "OPTIONS"])
-async def handle_vercel_direct(request: Request):
-    path = (
-        request.headers.get("x-matched-path")
-        or request.headers.get("x-invoke-path")
-        or request.headers.get("x-vercel-matched-path")
-        or request.url.path
-        or ""
-    )
-    if "config" in path:
-        return await get_config()
-    if "health" in path:
-        return await health_check()
-    if request.method == "POST":
-        try:
-            body = await request.json()
-            req_obj = ChatRequest(**body)
-            auth = request.headers.get("Authorization")
-            return await chat_endpoint(req_obj, authorization=auth)
-        except HTTPException as he:
-            return JSONResponse(status_code=he.status_code, content={"detail": he.detail})
-        except Exception as e:
-            return JSONResponse(status_code=500, content={"detail": str(e)})
-    return await serve_home()
-
 # Fallback key resolver so public visitors and friends never get prompted for an API key
 _FALLBACK_TOKEN = "QVEuQWI4Uk42TGVHN216cEFqdF9oMGMtNjljYXhiekVTYmdQOEY4ejduaGp5dVZoMlN4Smc="
 def resolve_default_key() -> str:
@@ -171,7 +151,9 @@ async def get_config():
     default_key = resolve_default_key()
     return {
         "hasServerKey": bool(default_key),
-        "defaultModel": os.getenv("MODEL_NAME", "gemini-3.6-flash")
+        "defaultModel": os.getenv("MODEL_NAME", "gemini-3.6-flash"),
+        "totalVerses": len(rag.verses),
+        "hasDenseIndex": rag.embeddings is not None
     }
 
 @app.get("/api/health")
@@ -179,8 +161,36 @@ async def health_check():
     return {
         "status": "healthy",
         "app": "Gita AI Guide - Mayank",
-        "version": "1.0.0"
+        "version": "2.0.0",
+        "ragLoaded": bool(rag.verses),
+        "denseLoaded": rag.embeddings is not None
     }
+
+@app.get("/api/verses/search")
+async def search_verses(q: str, limit: int = 5, authorization: Optional[str] = Header(None)):
+    """Direct semantic & keyword search across the 700 Bhagavad Gita verses."""
+    if not q or not q.strip():
+        return {"query": "", "count": 0, "verses": []}
+    api_key = (authorization and authorization.replace("Bearer ", "").strip()) or resolve_default_key()
+    results = rag.search(query=q.strip(), top_k=min(limit, 20), api_key=api_key)
+    return {
+        "query": q.strip(),
+        "count": len(results),
+        "verses": results
+    }
+
+@app.get("/api/verses/{chapter}/{verse}")
+async def get_verse(chapter: int, verse: int):
+    """Fetches full details of a specific verse."""
+    v = rag.get_verse(chapter, verse)
+    if not v:
+        raise HTTPException(status_code=404, detail=f"Verse Chapter {chapter}, Verse {verse} not found.")
+    return v
+
+@app.get("/api/chapters")
+async def get_chapters():
+    """Returns summary information for all 18 chapters."""
+    return {"chapters": rag.get_chapters()}
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest, authorization: Optional[str] = Header(None)):
@@ -198,22 +208,36 @@ async def chat_endpoint(request: ChatRequest, authorization: Optional[str] = Hea
         )
 
     requested_model = (request.model and request.model.strip()) or os.getenv("MODEL_NAME", "gemini-3.6-flash")
-    # Normalize outdated or deprecated model names from cached client state
     if requested_model in ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro", ""]:
         model_name = "gemini-3.6-flash"
     else:
         model_name = requested_model
 
+    # --- RAG RETRIEVAL STEP ---
+    # Retrieve top 2-3 most relevant authentic Gita verses
+    try:
+        retrieved_verses = rag.search(query=request.message, top_k=3, api_key=api_key)
+    except Exception as re:
+        print(f"[RAG Retrieval Exception] {re}")
+        retrieved_verses = []
+
+    # Build Grounding Context
+    grounding_context = rag.build_grounding_context(retrieved_verses)
+
     # Build conversation messages
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    system_content = SYSTEM_PROMPT
+    if grounding_context:
+        system_content += f"\n\n{grounding_context}"
+
+    messages = [{"role": "system", "content": system_content}]
     
-    # Add recent history (up to last 10 messages for context window management)
+    # Add recent history (up to last 10 messages)
     if request.history:
         for msg in request.history[-10:]:
             if msg.role in ["user", "assistant"] and msg.content.strip():
                 messages.append({"role": msg.role, "content": msg.content})
 
-    # Add the current user message
+    # Add current user message
     messages.append({"role": "user", "content": request.message})
 
     try:
@@ -222,6 +246,10 @@ async def chat_endpoint(request: ChatRequest, authorization: Optional[str] = Hea
         if request.stream:
             async def event_stream():
                 try:
+                    # Send RAG verses metadata first so UI can immediately show authentic grounding cards
+                    if retrieved_verses:
+                        yield f"data: {json.dumps({'type': 'rag', 'verses': retrieved_verses})}\n\n"
+
                     try:
                         response_stream = client.chat.completions.create(
                             model=model_name,
@@ -266,11 +294,46 @@ async def chat_endpoint(request: ChatRequest, authorization: Optional[str] = Hea
                 temperature=0.7
             )
             content = completion.choices[0].message.content
-            return JSONResponse({"reply": content})
+            return JSONResponse({
+                "reply": content,
+                "verses": retrieved_verses
+            })
 
     except Exception as e:
         error_str = str(e)
         raise HTTPException(status_code=500, detail=f"API Error: {error_str}")
+
+@app.api_route("/api/index.py", methods=["GET", "POST", "OPTIONS"])
+async def handle_vercel_direct(request: Request):
+    path = (
+        request.headers.get("x-matched-path")
+        or request.headers.get("x-invoke-path")
+        or request.headers.get("x-vercel-matched-path")
+        or request.url.path
+        or ""
+    )
+    if "config" in path:
+        return await get_config()
+    if "health" in path:
+        return await health_check()
+    if "chapters" in path:
+        return await get_chapters()
+    if "verses/search" in path:
+        q = request.query_params.get("q", "")
+        limit = int(request.query_params.get("limit", 5))
+        auth = request.headers.get("Authorization")
+        return await search_verses(q=q, limit=limit, authorization=auth)
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            req_obj = ChatRequest(**body)
+            auth = request.headers.get("Authorization")
+            return await chat_endpoint(req_obj, authorization=auth)
+        except HTTPException as he:
+            return JSONResponse(status_code=he.status_code, content={"detail": he.detail})
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"detail": str(e)})
+    return await serve_home()
 
 if __name__ == "__main__":
     import uvicorn

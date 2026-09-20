@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mayank · Bhagavad Gita AI Guide</title>
+  <title>Mayank · Bhagavad Gita AI Guide & RAG</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕉</text></svg>">
   
-  <meta name="description" content="Seek counsel in the timeless wisdom of the Bhagavad Gita and Lord Krishna for modern life dilemmas, career anxiety, relationships, and finding purpose.">
-  <meta name="keywords" content="Bhagavad Gita, AI Guide, Krishna Wisdom, Spiritual AI, Life Dilemmas, Karma Yoga">
+  <meta name="description" content="Seek counsel in the timeless wisdom of the Bhagavad Gita and Lord Krishna for modern life dilemmas, career anxiety, relationships, and finding purpose. Grounded in authentic 700 verses.">
+  <meta name="keywords" content="Bhagavad Gita, AI Guide, Krishna Wisdom, Spiritual AI, Life Dilemmas, Karma Yoga, RAG">
   <meta name="author" content="Mayank">
   <meta name="theme-color" content="#f59e0b">
 
@@ -15,7 +15,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://gita-ai-guide-ten.vercel.app/">
   <meta property="og:title" content="Mayank · Bhagavad Gita AI Guide">
-  <meta property="og:description" content="Timeless spiritual wisdom from the Bhagavad Gita applied to modern life challenges. Ask your dilemmas and receive thoughtful counsel.">
+  <meta property="og:description" content="Timeless spiritual wisdom from the Bhagavad Gita applied to modern life challenges. Grounded in 700 authentic Sanskrit verses.">
   
   <!-- Twitter Card Preview -->
   <meta name="twitter:card" content="summary">
@@ -31,7 +31,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&family=Tiro+Devanagari+Sanskrit:ital@0;1&display=swap" rel="stylesheet">
   
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="/static/css/style.css?v=3">
+  <link rel="stylesheet" href="/static/css/style.css?v=5">
 </head>
 <body class="h-full flex flex-col antialiased selection:bg-amber-500/30 selection:text-amber-200">
 
@@ -52,11 +52,11 @@
               Mayank
             </h1>
             <span class="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest">
-              Gita AI Guide
+              Gita AI Guide · RAG
             </span>
           </div>
           <p class="text-[11px] text-gray-400 font-sanskrit tracking-wider hidden xs:block">
-            ॐ श्री परमात्मने नमः · Timeless Wisdom for Modern Dilemmas
+            ॐ श्री परमात्मने नमः · Timeless Wisdom Grounded in 700 Verses
           </p>
         </div>
       </div>
@@ -64,6 +64,14 @@
       <!-- Header Actions -->
       <div class="flex items-center gap-2 sm:gap-3">
         <div id="keyStatusBadge"></div>
+
+        <!-- Verse Explorer Button -->
+        <button id="searchVerseBtn" class="p-2 text-gray-400 hover:text-amber-300 hover:bg-gray-800/80 rounded-xl transition flex items-center gap-1.5" title="Search 700 Gita Verses (RAG Explorer)">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span class="hidden sm:inline text-xs font-medium text-amber-400/90">Scripture Search</span>
+        </button>
 
         <button id="clearChatBtn" class="p-2 text-gray-400 hover:text-amber-300 hover:bg-gray-800/80 rounded-xl transition" title="Start New Conversation">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,7 +105,7 @@
       </h2>
       
       <p class="text-sm sm:text-base text-gray-300 max-w-xl mx-auto mb-8 font-light leading-relaxed">
-        Bring your doubts, anxieties, moral dilemmas, or search for purpose. Mayank interprets Lord Krishna’s timeless principles into practical modern guidance.
+        Bring your doubts, anxieties, moral dilemmas, or search for purpose. Mayank uses <strong class="text-amber-400 font-medium">Retrieval-Augmented Generation (RAG)</strong> to find authentic verses and interpret Lord Krishna’s timeless principles into modern guidance.
       </p>
 
       <!-- Quick Dilemma Chips -->
@@ -144,7 +152,7 @@
           <textarea
             id="userInput"
             rows="1"
-            placeholder="Ask your life question or describe your dilemma..."
+            placeholder="Ask your life question or specify a verse (e.g. 'Chapter 2 Verse 47')..."
             class="w-full bg-transparent px-4 py-3 text-sm sm:text-base text-gray-100 placeholder-gray-500 focus:outline-none resize-none max-h-40 min-h-[48px]"
           ></textarea>
         </div>
@@ -152,51 +160,99 @@
         <button
           type="submit"
           id="sendBtn"
-          class="h-[48px] px-5 rounded-2xl saffron-gradient text-white font-medium shadow-lg shadow-amber-950/50 hover:opacity-95 active:scale-95 transition flex items-center justify-center shrink-0"
-          title="Send query"
+          class="h-12 w-12 rounded-2xl saffron-gradient text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-900/30 hover:opacity-90 active:scale-95 transition"
+          title="Send Inquiry"
         >
-          <svg class="w-5 h-5 -rotate-45 relative left-[1px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg class="w-5 h-5 -rotate-45 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </button>
       </form>
 
-      <div class="text-center mt-2">
-        <p class="text-[11px] text-gray-500 font-light">
-          Inspired by the Bhagavad Gita · Responses are philosophical & ethical perspectives for mindful contemplation.
-        </p>
+      <div class="flex items-center justify-between text-[11px] text-gray-500 mt-2 px-1">
+        <span>Grounded in authentic Shlokas · Pure non-sectarian philosophy</span>
+        <span class="hidden sm:inline">Press Enter to send, Shift+Enter for new line</span>
       </div>
 
     </div>
   </footer>
 
-  <!-- Settings Modal -->
-  <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-    <div class="glass-panel w-full max-w-md rounded-2xl p-6 border border-amber-500/30 shadow-2xl relative">
-      
-      <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-800">
-        <h3 class="font-cinzel text-lg font-bold text-amber-400 flex items-center gap-2">
-          <span>⚙️</span> Settings & Model
-        </h3>
-        <button id="closeSettingsBtn" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition">
-          ✕
+  <!-- Scripture Explorer Modal -->
+  <div id="searchModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="glass-panel max-w-2xl w-full rounded-2xl p-5 sm:p-6 border border-amber-500/30 shadow-2xl max-h-[88vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-800/80">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">📖</span>
+          <div>
+            <h3 class="font-cinzel text-base sm:text-lg font-bold saffron-gradient-text">Bhagavad Gita Scripture Explorer</h3>
+            <p class="text-[11px] text-gray-400">Search 700 verses across 18 chapters with semantic RAG</p>
+          </div>
+        </div>
+        <button id="closeSearchBtn" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
-      <div class="space-y-4">
-        <!-- Gemini API Key -->
+      <!-- Search Input -->
+      <div class="mt-4 relative">
+        <input
+          id="verseSearchInput"
+          type="text"
+          placeholder="Type a dilemma, topic (e.g. anger, peace), or verse (e.g. 2:47)..."
+          class="w-full px-4 py-2.5 pl-10 rounded-xl bg-gray-900/90 border border-amber-500/30 text-gray-100 text-sm focus:outline-none focus:border-amber-400 placeholder-gray-500"
+        />
+        <svg class="w-4 h-4 text-amber-400/70 absolute left-3.5 top-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+
+      <!-- Quick Exploration Topics -->
+      <div class="flex flex-wrap gap-1.5 mt-2.5">
+        <button class="search-quick-chip px-2.5 py-1 rounded-lg text-[11px] bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 transition" data-q="Chapter 2 Verse 47">BG 2.47 (Duty & Results)</button>
+        <button class="search-quick-chip px-2.5 py-1 rounded-lg text-[11px] bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 transition" data-q="Overcoming anger and desire">BG 2.62 (Root of Anger)</button>
+        <button class="search-quick-chip px-2.5 py-1 rounded-lg text-[11px] bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 transition" data-q="Mind control and meditation">BG 6.5 (Mind as Friend)</button>
+        <button class="search-quick-chip px-2.5 py-1 rounded-lg text-[11px] bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 transition" data-q="Surrender all dharma to me">BG 18.66 (Ultimate Refuge)</button>
+      </div>
+
+      <!-- Results Container -->
+      <div id="verseSearchResults" class="mt-4 flex-1 overflow-y-auto space-y-3 pr-1">
+        <div class="text-center py-8 text-gray-400 text-xs">
+          Type a concept, dilemma, or chapter/verse reference above to retrieve verses.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-amber-500/30 shadow-2xl">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">⚙️</span>
+          <h3 class="font-cinzel text-lg font-bold text-gray-100">Settings & API Key</h3>
+        </div>
+        <button id="closeSettingsBtn" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <!-- Gemini API Key Input -->
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
-            Gemini API Key
+            Custom Google Gemini API Key
           </label>
           <input
             type="password"
             id="apiKeyInput"
             placeholder="AIzaSy..."
-            class="w-full px-3.5 py-2.5 rounded-xl bg-gray-900/90 border border-gray-700 text-gray-100 placeholder-gray-500 text-sm focus:outline-none focus:border-amber-500"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-gray-900/90 border border-gray-700 text-gray-100 text-sm focus:outline-none focus:border-amber-500 placeholder-gray-600"
           />
           <p class="text-[11px] text-gray-400 mt-1">
-            Get your free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">Google AI Studio</a>. Saved only in your browser.
+            Optional: Leave empty to use the pre-configured server key. Get your free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-amber-400 underline hover:text-amber-300">Google AI Studio</a>.
           </p>
         </div>
 
@@ -216,7 +272,7 @@
 
         <!-- Information Note -->
         <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-500/20 text-xs text-amber-200/90 leading-relaxed">
-          💡 If you are deploying this website, you can also set <code class="bg-gray-900 px-1 py-0.5 rounded text-amber-300">GEMINI_API_KEY</code> in your cloud host environment variables (e.g. on Render/Railway) so visitors won't need to enter a key.
+          💡 RAG is active: All user queries retrieve authentic Sanskrit shlokas and translations from the 700 verses of the Bhagavad Gita to ground every answer.
         </div>
       </div>
 
@@ -232,6 +288,6 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=10"></script>
+  <script src="/static/js/app.js?v=12"></script>
 </body>
 </html>

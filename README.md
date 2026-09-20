@@ -1,22 +1,32 @@
-# 🕉️ Gita AI Guide ("Mayank") - Web Application
+# 🕉️ Gita AI Guide ("Mayank") - Bhagavad Gita RAG
 
-A web application bringing the timeless philosophical wisdom and ethical teachings of the **Bhagavad Gita** and **Lord Krishna** to modern life dilemmas, built with **FastAPI**, **Google Gemini**, and a serene spiritual UI.
+A spiritual AI web application bringing the timeless philosophical wisdom and ethical teachings of the **Bhagavad Gita** and **Lord Krishna** to modern life dilemmas. Built with **FastAPI**, **Google Gemini**, and a **Retrieval-Augmented Generation (RAG)** pipeline grounded in all 700 authentic Sanskrit verses across 18 chapters.
 
 ---
 
 ## ✨ Features
 
-- **Philosophical Lens**: Structured Gita-based counsel for modern dilemmas (Career, Anxiety, Anger, Relationships, Dharma).
+- **Retrieval-Augmented Generation (RAG)**:
+  - **Authentic Scripture Grounding**: Every inquiry retrieves the most relevant verses from the complete 700 verses of the Bhagavad Gita.
+  - **Dense Vector Search**: Powered by Google's `gemini-embedding-001` (3072-dim embeddings), precomputed in `data/gita_embeddings.npz` for sub-5ms lookups with zero startup delay.
+  - **Exact Reference Parsing**: Instantly detects queries like `Chapter 2 Verse 47`, `2:47`, or `BG 18.66`.
+  - **BM25 Lexical Keyword Search**: Fast sparse matching over Sanskrit transliterations, keywords, and chapter themes.
+  - **Zero-Downtime Fallback**: If the embedding API is unreachable, BM25 operates 100% offline.
+- **Scripture Explorer Modal**: Search any concept, dilemma, or chapter/verse reference directly from the UI.
 - **Structured Wisdom Cards**:
   - 🌼 **Situation**: Contextual summary of the dilemma.
   - 🕉 **Krishna's Teaching**: Core philosophical lesson.
-  - 📖 **Gita Principle**: Authentic chapter & verse references (e.g. Chapter 2, Verse 47).
+  - 📖 **Gita Principle**: Authentic chapter & verse references citing retrieved Shlokas.
   - 🌍 **Modern-Life Example**: Practical everyday scenario.
   - 💡 **Practical Actions**: Actionable checklist.
   - 🌿 **Reflection**: Soulful meditation thought.
-- **Audio Voice Recitation**: Click the 🔊 button on any response to listen to Krishna's counsel read aloud.
+- **Authentic Sanskrit Shloka Cards**:
+  - Original Sanskrit text in Devanagari script.
+  - Roman transliteration with accents.
+  - Authentic English translation (Swami Sivananda, Shri Purohit Swami) and Hindi (Swami Ramsukhdas).
+  - Match relevance score badges.
+- **Audio Voice Recitation**: Listen to Krishna's counsel and translations read aloud.
 - **Real-Time Streaming**: Responsive, meditative word-by-word streaming using Server-Sent Events (SSE).
-- **Client & Server Key Support**: Set `GEMINI_API_KEY` on the server or allow users to supply their own free Google AI Studio key via UI settings.
 
 ---
 
@@ -35,7 +45,7 @@ cp .env.example .env
 Open `.env` and add your Google Gemini API key:
 ```env
 GEMINI_API_KEY=your_actual_gemini_api_key_here
-MODEL_NAME=gemini-2.5-flash
+MODEL_NAME=gemini-3.6-flash
 PORT=8000
 ```
 *(Get a free API key at [Google AI Studio](https://aistudio.google.com/app/apikey))*
@@ -48,48 +58,37 @@ Open your browser and navigate to: **http://localhost:8000**
 
 ---
 
-## 🌐 Free Cloud Deployment Options
+## 📡 RAG REST API Endpoints
 
-### Option 1: Deploy on Render.com (Recommended & Free)
-1. Push this folder to a GitHub repository:
+- `POST /api/chat`: Submit life dilemma, receives SSE stream with authentic `rag` verses and response chunks.
+- `GET /api/verses/search?q=karma&limit=5`: Full-text & semantic search across all 700 verses.
+- `GET /api/verses/{chapter}/{verse}`: Retrieve a specific verse with Sanskrit, transliteration, English & Hindi translations.
+- `GET /api/chapters`: List all 18 chapters with summary descriptions.
+- `GET /api/config`: Current model, key status, and RAG index health.
+
+---
+
+## 🌐 Deployment (Render, Railway, Vercel, Docker)
+
+The RAG index is lightweight (< 10MB total footprint) and runs in memory in < 15MB RAM, making it fast and deployable on any free or low-tier host:
+
+### Option 1: Deploy on Render.com
+1. Commit and push your changes to GitHub:
    ```bash
-   git init
    git add .
-   git commit -m "Initial commit of Gita AI Guide"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/gita-ai-guide.git
-   git push -u origin main
+   git commit -m "Add Bhagavad Gita RAG"
+   git push origin main
    ```
-2. Log in to [Render.com](https://render.com) and click **New +** -> **Web Service**.
-3. Select your GitHub repository.
-4. Render will auto-detect Python, or use these settings:
-   - **Environment**: `Python 3`
+2. In Render, create or open your Web Service:
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn app:app --host 0.0.0.0 --port $PORT`
-5. In the **Environment Variables** section, add:
-   - `GEMINI_API_KEY` = `your_gemini_api_key`
-   - `MODEL_NAME` = `gemini-2.5-flash`
-6. Click **Deploy Web Service**. Your app will be live at `https://your-app-name.onrender.com` with free SSL/HTTPS!
+   - **Environment Variables**:
+     - `GEMINI_API_KEY`: Your Google AI Studio key
+     - `MODEL_NAME`: `gemini-3.6-flash`
 
----
-
-### Option 2: Deploy on Railway.app
-1. Go to [Railway.app](https://railway.app) and sign in with GitHub.
-2. Click **New Project** -> **Deploy from GitHub repo**.
-3. Select your repository. Railway will detect the `Procfile` and `requirements.txt` automatically.
-4. Under **Variables**, add:
-   - `GEMINI_API_KEY` = `your_gemini_api_key`
-5. Click **Deploy**. Railway will generate a public domain for you.
-
----
-
-### Option 3: Deploy with Docker
-You can run this container anywhere (AWS, Google Cloud Run, DigitalOcean, Azure):
+### Option 2: Deploy with Docker
 ```bash
-# Build the container
 docker build -t gita-ai-guide .
-
-# Run the container
 docker run -d -p 8000:8000 -e GEMINI_API_KEY="your_api_key" gita-ai-guide
 ```
 
@@ -99,18 +98,25 @@ docker run -d -p 8000:8000 -e GEMINI_API_KEY="your_api_key" gita-ai-guide
 
 ```
 gita-ai-guide/
-├── app.py                  # FastAPI server & Gemini streaming backend
+├── app.py                      # FastAPI server with RAG chat & search endpoints
+├── rag.py                      # Core Gita RAG engine (dense vector + BM25 hybrid)
+├── requirements.txt            # Python dependencies (FastAPI, NumPy, OpenAI SDK)
+├── data/
+│   ├── gita_verses.json        # All 701 verses with Sanskrit, translations & commentary
+│   ├── chapters.json           # All 18 chapters with names and summaries
+│   └── gita_embeddings.npz     # Precomputed 701-verse normalized vector index
+├── scripts/
+│   ├── build_gita_dataset.py   # Compiles canonical Gita JSON dataset
+│   └── generate_embeddings.py  # Generates 701 dense vectors using Gemini API
+├── tests/
+│   └── test_rag.py             # Automated retrieval & precision tests
 ├── templates/
-│   └── index.html          # Responsive single-page web UI
+│   └── index.html              # Main spiritual UI with Scripture Explorer
 ├── static/
-│   ├── css/
-│   │   └── style.css       # Spiritual styling, gold accents, card animations
-│   └── js/
-│       └── app.js          # Chat handling, structured card parser, Web Speech
-├── requirements.txt        # Python dependencies
-├── Procfile                # Render / Railway process definition
-├── render.yaml             # Render Blueprint specification
-├── Dockerfile              # Container deployment
-├── .env.example            # Environment template
-└── README.md               # Documentation & deployment guide
+│   ├── css/style.css           # Styling, typography, Devanagari Sanskrit support
+│   └── js/app.js               # Client SSE streaming & RAG cards rendering
+├── public/                     # Static distribution files for serverless / CDN
+│   ├── index.html
+│   └── static/
+└── Dockerfile
 ```
