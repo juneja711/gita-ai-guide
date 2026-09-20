@@ -305,24 +305,31 @@ async def chat_endpoint(request: ChatRequest, authorization: Optional[str] = Hea
 
 @app.api_route("/api/index.py", methods=["GET", "POST", "OPTIONS"])
 async def handle_vercel_direct(request: Request):
+    sub_path = request.query_params.get("__path", "").strip()
     path = (
-        request.headers.get("x-matched-path")
+        sub_path
+        or request.headers.get("x-matched-path")
         or request.headers.get("x-invoke-path")
         or request.headers.get("x-vercel-matched-path")
         or request.url.path
         or ""
-    )
+    ).lower()
+
     if "config" in path:
         return await get_config()
     if "health" in path:
         return await health_check()
     if "chapters" in path:
         return await get_chapters()
-    if "verses/search" in path:
+    if "search" in path:
         q = request.query_params.get("q", "")
-        limit = int(request.query_params.get("limit", 5))
+        limit = int(request.query_params.get("limit", 6))
         auth = request.headers.get("Authorization")
         return await search_verses(q=q, limit=limit, authorization=auth)
+    if "verses" in path:
+        m = re.search(r"verses/([0-9]+)/([0-9]+)", path)
+        if m:
+            return await get_verse(int(m.group(1)), int(m.group(2)))
     if request.method == "POST":
         try:
             body = await request.json()
@@ -333,7 +340,8 @@ async def handle_vercel_direct(request: Request):
             return JSONResponse(status_code=he.status_code, content={"detail": he.detail})
         except Exception as e:
             return JSONResponse(status_code=500, content={"detail": str(e)})
-    return await serve_home()
+
+    return JSONResponse(status_code=404, content={"detail": f"API route '{path}' not found"})
 
 if __name__ == "__main__":
     import uvicorn

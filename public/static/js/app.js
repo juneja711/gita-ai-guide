@@ -183,10 +183,23 @@ async function executeVerseSearch(query) {
     </div>`;
 
   try {
-    const res = await fetch(`/api/verses/search?q=${encodeURIComponent(query)}&limit=6`, {
+    let res = await fetch(`/api/verses/search?q=${encodeURIComponent(query)}&limit=6`, {
       headers: state.apiKey ? { 'Authorization': `Bearer ${state.apiKey}` } : {}
     });
-    if (!res.ok) throw new Error('Search failed');
+
+    let contentType = res.headers.get('content-type') || '';
+    // If route returned non-JSON (e.g. Vercel serverless rewrite quirk), try direct router
+    if (!res.ok || !contentType.includes('application/json')) {
+      res = await fetch(`/api/index.py?__path=search&q=${encodeURIComponent(query)}&limit=6`, {
+        headers: state.apiKey ? { 'Authorization': `Bearer ${state.apiKey}` } : {}
+      });
+      contentType = res.headers.get('content-type') || '';
+    }
+
+    if (!contentType.includes('application/json')) {
+      throw new Error("Unable to reach search API. Please wait a moment and try again.");
+    }
+
     const data = await res.json();
     const verses = data.verses || [];
 
